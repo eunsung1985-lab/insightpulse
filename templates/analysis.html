@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="py-8 md:py-12" id="app">
+    <!-- Analysis Mode Toggle -->
+    <div class="flex justify-center mb-10">
+        <div class="bg-slate-100 p-1 rounded-full flex">
+            <button onclick="setMode('stock')" id="mode-stock"
+                class="px-6 py-2 rounded-full font-bold text-sm transition-all shadow bg-white text-indigo-600">
+                📈 종목 분석 (Ticker)
+            </button>
+            <button onclick="setMode('link')" id="mode-link"
+                class="px-6 py-2 rounded-full font-bold text-sm transition-all text-slate-500 hover:text-slate-700">
+                🔗 뉴스 링크 분석 (URL)
+            </button>
+        </div>
+    </div>
+
+    <!-- Mode: Stock Analysis -->
+    <div id="view-stock" class="block">
+        <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div class="flex-grow mr-4">
+                <input type="text" id="ticker-input" value="{{ ticker }}" placeholder="종목명 입력"
+                    onkeypress="if(event.key === 'Enter') loadAnalysis('neutral')"
+                    class="text-3xl font-bold bg-transparent border-b-2 border-slate-200 focus:border-indigo-600 focus:outline-none w-full md:w-auto">
+                <p class="text-slate-500 mt-1">AI 다중 페르소나 심층 리포트</p>
+            </div>
+            <div class="flex gap-2 mt-4 md:mt-0">
+                <button onclick="loadAnalysis('neutral')"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700">
+                    분석 실행
+                </button>
+                <button onclick="savePDF()"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 flex items-center">
+                    PDF 저장
+                </button>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="flex space-x-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+            <button onclick="switchTab('neutral')" id="tab-neutral"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-full font-bold whitespace-nowrap shadow-md transition-all">⚖️
+                통합 분석</button>
+            <button onclick="switchTab('optimist')" id="tab-optimist"
+                class="px-4 py-2 bg-white text-slate-600 hover:bg-slate-50 rounded-full font-medium whitespace-nowrap border border-slate-200 transition-all">🚀
+                낙관적 시각</button>
+            <button onclick="switchTab('critic')" id="tab-critic"
+                class="px-4 py-2 bg-white text-slate-600 hover:bg-slate-50 rounded-full font-medium whitespace-nowrap border border-slate-200 transition-all">🛡️
+                비판적 시각</button>
+        </div>
+
+        <div class="glass-panel p-6 md:p-8 rounded-2xl shadow-sm min-h-[500px] relative">
+            <div id="loading-stock"
+                class="hidden absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-2xl">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            </div>
+            <div id="analysis-content" class="prose prose-slate max-w-none whitespace-pre-line">
+                상단의 '분석 실행' 버튼을 눌러주세요.
+            </div>
+        </div>
+    </div>
+
+    <!-- Mode: Link Analysis -->
+    <div id="view-link" class="hidden">
+        <div class="max-w-3xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-slate-800">뉴스 링크 연관 종목 분석</h2>
+                <p class="text-slate-500">뉴스 기사를 분석하여 투자 아이디어를 발굴합니다.</p>
+            </div>
+
+            <div class="flex gap-2 mb-8">
+                <input type="text" id="url-input" placeholder="뉴스 기사 URL을 붙여넣으세요"
+                    class="flex-grow px-4 py-3 rounded-xl border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button onclick="analyzeLink()"
+                    class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg">
+                    분석
+                </button>
+            </div>
+
+            <div class="glass-panel p-6 md:p-8 rounded-2xl shadow-sm min-h-[400px] relative">
+                <div id="loading-link"
+                    class="hidden absolute inset-0 bg-white/50 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-2xl">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+                    <p class="text-indigo-600 font-bold">기사 내용을 읽고 분석 중입니다...</p>
+                </div>
+                <div id="link-result" class="prose prose-slate max-w-none whitespace-pre-line text-slate-700">
+                    URL을 입력하면 이곳에 분석 결과가 표시됩니다.
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- MODE SWITCHING ---
+    function setMode(mode) {
+        document.getElementById('view-stock').classList.toggle('hidden', mode !== 'stock');
+        document.getElementById('view-link').classList.toggle('hidden', mode !== 'link');
+
+        // Toggle Button Styles
+        const activeClass = "bg-white text-indigo-600 shadow".split(' ');
+        const inactiveClass = "text-slate-500 hover:text-slate-700".split(' ');
+
+        const stockBtn = document.getElementById('mode-stock');
+        const linkBtn = document.getElementById('mode-link');
+
+        if (mode === 'stock') {
+            stockBtn.classList.add(...activeClass);
+            stockBtn.classList.remove(...inactiveClass);
+            linkBtn.classList.remove(...activeClass);
+            linkBtn.classList.add(...inactiveClass);
+            // Hide PDF button if in link mode? For now keeping simple.
+        } else {
+            linkBtn.classList.add(...activeClass);
+            linkBtn.classList.remove(...inactiveClass);
+            stockBtn.classList.remove(...activeClass);
+            stockBtn.classList.add(...inactiveClass);
+        }
+    }
+
+    // --- STOCK LOGIC ---
+    let currentPersona = 'neutral';
+    let cache = {};
+
+    async function loadAnalysis(persona) {
+        const ticker = document.getElementById('ticker-input').value;
+        const contentDiv = document.getElementById('analysis-content');
+        const loadingDiv = document.getElementById('loading-stock');
+
+        if (!ticker) return alert("종목명을 입력해주세요.");
+
+        // Check cache
+        const key = `${ticker}-${persona}`;
+        if (cache[key]) {
+            contentDiv.innerText = cache[key];
+            return;
+        }
+
+        loadingDiv.classList.remove('hidden');
+
+        try {
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticker: ticker, persona: persona })
+            });
+            const data = await response.json();
+            cache[key] = data.result;
+            contentDiv.innerText = data.result;
+        } catch (error) {
+            contentDiv.innerText = "분석 실패: " + error;
+        } finally {
+            loadingDiv.classList.add('hidden');
+        }
+    }
+
+    function switchTab(persona) {
+        currentPersona = persona;
+        loadAnalysis(persona);
+        // ... (Update Tab Styles - reused from previous) ...
+    }
+
+    // --- LINK LOGIC ---
+    async function analyzeLink() {
+        const url = document.getElementById('url-input').value;
+        const resultDiv = document.getElementById('link-result');
+        const loadingDiv = document.getElementById('loading-link');
+
+        if (!url) return alert("URL을 입력해주세요.");
+
+        loadingDiv.classList.remove('hidden');
+
+        try {
+            const response = await fetch('/api/analyze_link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            });
+            const data = await response.json();
+            if (data.success) {
+                resultDiv.innerText = data.result;
+            } else {
+                resultDiv.innerText = "분석 오류: " + data.message;
+            }
+        } catch (error) {
+            resultDiv.innerText = "통신 오류: " + error;
+        } finally {
+            loadingDiv.classList.add('hidden');
+        }
+    }
+
+    // Initialize Check for URL params
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const link = urlParams.get('link');
+        const ticker = urlParams.get('ticker');
+
+        if (link) {
+            setMode('link');
+            document.getElementById('url-input').value = link;
+            analyzeLink(); // Auto start
+        } else if (ticker) {
+            setMode('stock');
+            // document.getElementById('ticker-input').value is already set by Jinja
+            loadAnalysis('neutral');
+        }
+    });
+    async function savePDF() {
+        const ticker = document.getElementById('ticker-input').value;
+        const content = document.getElementById('analysis-content').innerText;
+
+        if (!ticker) return alert("종목명을 입력해주세요.");
+        if (content.includes("분석 실행")) return alert("먼저 분석을 실행해주세요.");
+
+        if (!confirm(`${ticker} 분석 리포트를 PDF로 저장하시겠습니까?`)) return;
+
+        try {
+            const response = await fetch('/api/save_pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticker: ticker, content: content })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                alert(`성공! 구글 드라이브에 저장되었습니다.\n링크: ${data.link}`);
+                window.open(data.link, '_blank');
+            } else {
+                alert("저장 실패: " + data.message);
+            }
+        } catch (error) {
+            alert("오류 발생: " + error);
+        }
+    }
+</script>
+{% endblock %}

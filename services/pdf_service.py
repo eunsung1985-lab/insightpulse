@@ -11,15 +11,25 @@ class PDFService:
         pdf.add_page()
         
         # Use Bundled Font (NanumGothic) for Cross-Platform Korean support
-        font_path = os.path.join(os.getcwd(), 'static', 'fonts', 'NanumGothic.ttf')
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        font_path = os.path.join(base_dir, 'static', 'fonts', 'NanumGothic.ttf')
         
+        # Debugging: List files to check if font uploaded
+        print(f"[PDF] Current working dir: {os.getcwd()}")
+        font_dir = os.path.join(base_dir, 'static', 'fonts')
+        if os.path.exists(font_dir):
+            print(f"[PDF] Files in static/fonts: {os.listdir(font_dir)}")
+        else:
+            print(f"[PDF] static/fonts dir NOT FOUND at {font_dir}")
+
         if os.path.exists(font_path):
             pdf.add_font('NanumGothic', '', font_path)
             pdf.set_font('NanumGothic', size=12)
+            print("[PDF] Loaded NanumGothic successfully.")
         else:
-            # Fallback if bundled font not found (no longer trying system fonts)
+            print("[PDF] FONT FILE MISSING! Fallback to Helvetica.") 
             pdf.set_font("Helvetica", size=12) # Standard FPDF font
-            print("Warning: Korean font (NanumGothic) not found. Text may appear broken.")
+            print("Warning: Korean font not found. Text may appear broken.")
 
         # Title
         pdf.cell(200, 10, txt=f"InsightPulse Report: {ticker}", ln=True, align='C')
@@ -27,7 +37,7 @@ class PDFService:
         # Body
         if 'NanumGothic' in pdf.fonts:
              pdf.set_font("NanumGothic", size=10)
-        else: # Fallback to Helvetica if NanumGothic wasn't loaded
+        else:
              pdf.set_font("Helvetica", size=10)
             
         pdf.multi_cell(0, 10, txt=str(analysis_data))

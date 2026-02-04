@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 # Use a static secret key for production (from .env) or a default for dev
-app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key-insightpulse")
+app.secret_key = os.getenv("SECRET_KEY", "dev-key")
 
 # Routes
 @app.route('/')

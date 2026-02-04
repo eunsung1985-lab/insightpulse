@@ -10,22 +10,25 @@ class PDFService:
         pdf = FPDF()
         pdf.add_page()
         
-        # Use Windows System Font (Malgun Gothic) for Korean support
-        font_path = "C:/Windows/Fonts/malgun.ttf"
-        if os.path.exists(font_path):
-            pdf.add_font('Malgun', '', font_path) # Removed unique=True
-            pdf.set_font('Malgun', size=12)
-        else:
-            # Fallback if font missing (unlikely on Windows)
-            pdf.set_font("Arial", size=12)
-            print("Warning: Malgun font not found. Korean may not render.")
-
-        pdf.cell(200, 10, txt=f"InsightPulse Report: {ticker}", ln=True, align='C')
+        # Use Bundled Font (NanumGothic) for Cross-Platform Korean support
+        font_path = os.path.join(os.getcwd(), 'static', 'fonts', 'NanumGothic.ttf')
         
         if os.path.exists(font_path):
-            pdf.set_font("Malgun", size=10)
+            pdf.add_font('NanumGothic', '', font_path)
+            pdf.set_font('NanumGothic', size=12)
         else:
-            pdf.set_font("Arial", size=10)
+            # Fallback if bundled font not found (no longer trying system fonts)
+            pdf.set_font("Helvetica", size=12) # Standard FPDF font
+            print("Warning: Korean font (NanumGothic) not found. Text may appear broken.")
+
+        # Title
+        pdf.cell(200, 10, txt=f"InsightPulse Report: {ticker}", ln=True, align='C')
+        
+        # Body
+        if 'NanumGothic' in pdf.fonts:
+             pdf.set_font("NanumGothic", size=10)
+        else: # Fallback to Helvetica if NanumGothic wasn't loaded
+             pdf.set_font("Helvetica", size=10)
             
         pdf.multi_cell(0, 10, txt=str(analysis_data))
         
